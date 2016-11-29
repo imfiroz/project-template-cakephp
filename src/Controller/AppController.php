@@ -74,7 +74,7 @@ class AppController extends Controller
      * Callack method.
      *
      * @param  Cake\Event\Event $event Event object
-     * @return void
+     * @return \Cake\Network\Response|null
      */
     public function beforeFilter(Event $event)
     {
@@ -83,8 +83,16 @@ class AppController extends Controller
             $this->_checkAccess($event);
         } catch (ForbiddenException $e) {
             if (empty($this->Auth->user())) {
-                $this->redirect('/login');
+                return $this->redirect('/login');
             } else {
+                $event = new Event('Controller.Acl.accessibleUrl', $this, [
+                    'user' => $this->Auth->user()
+                ]);
+                $this->EventManager()->dispatch($event);
+                // redirect to accessible url
+                if (!empty($event->result)) {
+                    return $this->redirect($event->result);
+                }
                 throw new ForbiddenException($e->getMessage());
             }
         }
